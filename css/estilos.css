@@ -1,0 +1,125 @@
+/*pagina*/
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+}
+
+/*encabezado*/
+header {
+    background-color: #333333;
+    color: white;
+    padding: 10px 20px;
+}
+
+header h1 {
+    margin: 0;
+}
+
+/*menu de navegacion*/
+nav ul {
+    display: flex;
+    flex-wrap: wrap;
+    list-style: none;
+    padding: 0;
+    margin: 10px 0 0 0;
+}
+
+nav li {
+    margin-right: 20px;
+}
+
+nav a {
+    color: white;
+}
+
+/*contenido*/
+main {
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 0 15px;
+}
+
+/*secciones*/
+section {
+    background-color: white;
+    border: 1px solid #cccccc;
+    padding: 15px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+}
+
+/*formularios*/
+label {
+    display: block;
+    margin-top: 10px;
+}
+
+/*texto al lado del radio*/
+.en-linea {
+    display: inline;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select,
+textarea {
+    width: 100%;
+    padding: 6px;
+    margin-top: 4px;
+    box-sizing: border-box;
+}
+
+/*filtros*/
+form[method="get"] input,
+form[method="get"] select {
+    width: auto;
+}
+
+button {
+    background-color: #333333;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #555555;
+}
+
+/*tablas*/
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+th, td {
+    border: 1px solid #cccccc;
+    padding: 6px;
+    text-align: left;
+}
+
+th {
+    background-color: #eeeeee;
+}
+
+/*mensajes*/
+.exito {
+    color: green;
+}
+
+.error {
+    color: red;
+}
+
+/*pie de pagina*/
+footer {
+    background-color: #333333;
+    color: white;
+    text-align: center;
+    padding: 10px;
+}
