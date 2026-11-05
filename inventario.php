@@ -1,190 +1,105 @@
 <?php
-// pagina de inventario (Persona 3)
+// inventario
+
 session_start();
-require "funciones.php";
+require_once "funciones.php";
 cargarDatosDePrueba();
 
-$categorias = array("Venta", "Uso interno");
-$filtros    = array("Todas", "Venta", "Uso interno");
-$tipos      = array("Entrada", "Salida");
+$productos = $_SESSION["productos"];
 
-// filtros de la tabla (vienen por GET)
-$buscar = "";
-if (isset($_GET["buscar"])) {
-    $buscar = trim($_GET["buscar"]);
-}
-
-$filtro = "Todas";
-if (isset($_GET["categoria"]) && in_array($_GET["categoria"], $filtros)) {
-    $filtro = $_GET["categoria"];
-}
-
-// resumen del inventario (con todos los productos, sin filtro)
-$valorInventario = 0;
 $nombres = array();
-$bajos = array();
-
-for ($i = 0; $i < count($_SESSION["productos"]); $i++) {
-    $p = $_SESSION["productos"][$i];
-
-    $valorInventario += $p["Compra"] * $p["Cantidad"];
-    array_push($nombres, $p["Nombre"]);
-
-    // stock bajo = la cantidad llego al minimo o esta por debajo
-    if ($p["Cantidad"] <= $p["Minimo"]) {
-        array_push($bajos, $p["Nombre"]);
-    }
+for ($i = 0; $i < count($productos); $i++) {
+    array_push($nombres, $productos[$i]["Nombre"]);
 }
 
-include "encabezado.php";
+require "encabezado.php";
 ?>
 
-<h2>Inventario</h2>
-
-<!-- resumen y alerta de stock bajo -->
+<!-- lista de productos -->
 <section>
-    <h3>Resumen</h3>
-    <p>Productos registrados: <strong><?php echo count($_SESSION["productos"]); ?></strong></p>
-    <p>Valor del inventario (a precio de compra): <strong><?php echo colones($valorInventario); ?></strong></p>
+    <h2>Productos</h2>
+    <table>
+        <tr><th>Producto</th><th>Categoría</th><th>Compra</th><th>Venta</th><th>Cantidad</th><th>Mínimo</th><th>Estado</th></tr>
+        <?php
+        for ($i = 0; $i < count($productos); $i++) {
+            echo "<tr>";
+            echo "<td>" . htmlspecialchars($productos[$i]["Nombre"]) . "</td>";
+            echo "<td>" . $productos[$i]["Categoria"] . "</td>";
+            echo "<td>" . colones($productos[$i]["Compra"]) . "</td>";
+            echo "<td>" . colones($productos[$i]["Venta"]) . "</td>";
+            echo "<td>" . $productos[$i]["Cantidad"] . "</td>";
+            echo "<td>" . $productos[$i]["Minimo"] . "</td>";
 
-    <?php if (count($bajos) > 0) { ?>
-        <p class="error">
-            Atención: <?php echo count($bajos); ?> producto(s) con stock bajo:
-            <?php echo htmlspecialchars(implode(", ", $bajos)); ?>.
-        </p>
-    <?php } else { ?>
-        <p class="exito">Todos los productos tienen stock suficiente.</p>
-    <?php } ?>
+            if ($productos[$i]["Cantidad"] <= $productos[$i]["Minimo"]) {
+                echo "<td class='error'>Stock bajo</td>";
+            } else {
+                echo "<td>Disponible</td>";
+            }
+            echo "</tr>";
+        }
+        ?>
+    </table>
 </section>
 
-<!-- formulario para agregar un producto (lo procesa procesar.php: agregar_producto) -->
+<!-- nuevo producto -->
 <section>
-    <h3>Nuevo producto</h3>
-
-    <form method="post" action="procesar.php" class="validar" id="form-producto">
+    <h2>Nuevo producto</h2>
+    <form method="post" action="procesar.php" onsubmit="return validarProducto()">
         <input type="hidden" name="accion" value="agregar_producto">
 
-        <label for="nombre">Nombre del producto</label>
-        <input type="text" id="nombre" name="nombre" required
-               data-nombre="El nombre" data-min="3" data-max="60">
+        <label for="nombre">Nombre</label>
+        <input type="text" id="nombre" name="nombre">
 
         <label for="categoria">Categoría</label>
         <select id="categoria" name="categoria">
-            <?php opciones($categorias, "Venta"); ?>
+            <option value="">Seleccione</option>
+            <option value="Venta">Venta</option>
+            <option value="Uso interno">Uso interno</option>
         </select>
 
-        <label for="compra">Precio de compra (₡)</label>
-        <input type="number" id="compra" name="compra" required min="1" step="1"
-               data-nombre="El precio de compra" data-tipo="entero" data-min="1" data-max="1000000">
+        <label for="compra">Precio de compra</label>
+        <input type="number" id="compra" name="compra" min="0">
 
-        <label for="venta">Precio de venta (₡) - los productos de uso interno quedan en 0</label>
-        <input type="number" id="venta" name="venta" required min="0" step="1"
-               data-nombre="El precio de venta" data-tipo="entero" data-min="0" data-max="1000000">
+        <label for="venta">Precio de venta (0 si es de uso interno)</label>
+        <input type="number" id="venta" name="venta" min="0">
 
-        <label for="cantidad">Cantidad en stock</label>
-        <input type="number" id="cantidad" name="cantidad" required min="0" step="1"
-               data-nombre="La cantidad" data-tipo="entero" data-min="0" data-max="100000">
+        <label for="cantidad">Cantidad</label>
+        <input type="number" id="cantidad" name="cantidad" min="0">
 
-        <label for="minimo">Stock mínimo (avisa cuando se llega a esta cantidad)</label>
-        <input type="number" id="minimo" name="minimo" required min="0" step="1"
-               data-nombre="El stock mínimo" data-tipo="entero" data-min="0" data-max="100000">
+        <label for="minimo">Stock mínimo</label>
+        <input type="number" id="minimo" name="minimo" min="0">
 
-        <button type="submit">Agregar producto</button>
+        <p id="error_producto" class="error"></p>
+        <button type="submit">Registrar producto</button>
     </form>
 </section>
 
-<!-- entradas y salidas de stock (lo procesa procesar.php: mover_existencias) -->
+<!-- entradas y salidas -->
 <section>
-    <h3>Registrar movimiento de stock</h3>
-
-    <form method="post" action="procesar.php" class="validar" id="form-movimiento">
+    <h2>Actualizar existencias</h2>
+    <form method="post" action="procesar.php" onsubmit="return validarExistencias()">
         <input type="hidden" name="accion" value="mover_existencias">
 
-        <label for="producto">Producto</label>
-        <select id="producto" name="producto">
+        <label for="producto_mov">Producto</label>
+        <select id="producto_mov" name="producto">
+            <option value="">Seleccione</option>
             <?php opciones($nombres, ""); ?>
         </select>
 
-        <label for="tipo">Tipo de movimiento</label>
-        <select id="tipo" name="tipo">
-            <?php opciones($tipos, "Entrada"); ?>
-        </select>
-
-        <label for="cantidad-mov">Cantidad</label>
-        <input type="number" id="cantidad-mov" name="cantidad" required min="1" step="1"
-               data-nombre="La cantidad" data-tipo="entero" data-min="1" data-max="100000">
-
         <p>
-            <strong>Entrada</strong>: compra de mercadería (suma stock y registra un gasto en Finanzas).<br>
-            <strong>Salida</strong>: uso interno o merma (solo resta stock). Las ventas de productos se registran al cobrar una cita.
+            <input type="radio" id="entrada" name="tipo" value="Entrada" checked>
+            <label for="entrada" class="en-linea">Entrada (compra, se registra como gasto)</label>
+            <br>
+            <input type="radio" id="salida" name="tipo" value="Salida">
+            <label for="salida" class="en-linea">Salida (uso o pérdida)</label>
         </p>
 
-        <button type="submit">Registrar movimiento</button>
+        <label for="cantidad_mov">Cantidad</label>
+        <input type="number" id="cantidad_mov" name="cantidad" min="1" value="1">
+
+        <p id="error_existencias" class="error"></p>
+        <button type="submit">Actualizar</button>
     </form>
 </section>
 
-<!-- tabla de productos con filtros -->
-<section>
-    <h3>Lista de productos</h3>
-
-    <form method="get" action="inventario.php">
-        <input type="text" name="buscar" placeholder="Buscar por nombre"
-               value="<?php echo htmlspecialchars($buscar); ?>">
-        <select name="categoria">
-            <?php opciones($filtros, $filtro); ?>
-        </select>
-        <button type="submit">Filtrar</button>
-        <a href="inventario.php">Limpiar</a>
-    </form>
-
-    <table>
-        <tr>
-            <th>Producto</th>
-            <th>Categoría</th>
-            <th>Compra</th>
-            <th>Venta</th>
-            <th>Cantidad</th>
-            <th>Mínimo</th>
-            <th>Estado</th>
-        </tr>
-        <?php
-        $mostrados = 0;
-
-        for ($i = 0; $i < count($_SESSION["productos"]); $i++) {
-            $producto = $_SESSION["productos"][$i];
-
-            // filtros: categoria y texto del nombre
-            if ($filtro != "Todas" && $producto["Categoria"] != $filtro) {
-                continue;
-            }
-            if ($buscar != "" && mb_stripos($producto["Nombre"], $buscar) === false) {
-                continue;
-            }
-
-            $mostrados++;
-            $stockBajo = ($producto["Cantidad"] <= $producto["Minimo"]);
-        ?>
-        <tr>
-            <td><?php echo htmlspecialchars($producto["Nombre"]); ?></td>
-            <td><?php echo htmlspecialchars($producto["Categoria"]); ?></td>
-            <td><?php echo colones($producto["Compra"]); ?></td>
-            <td><?php echo ($producto["Categoria"] == "Venta") ? colones($producto["Venta"]) : "-"; ?></td>
-            <td><?php echo $producto["Cantidad"]; ?></td>
-            <td><?php echo $producto["Minimo"]; ?></td>
-            <td>
-                <?php if ($stockBajo) { ?>
-                    <span class="error">Stock bajo</span>
-                <?php } else { ?>
-                    <span class="exito">Disponible</span>
-                <?php } ?>
-            </td>
-        </tr>
-        <?php } ?>
-    </table>
-
-    <?php if ($mostrados == 0) { ?>
-        <p>No se encontraron productos.</p>
-    <?php } ?>
-</section>
-
-<?php include "pie.php"; ?>
+<?php require "pie.php"; ?>
